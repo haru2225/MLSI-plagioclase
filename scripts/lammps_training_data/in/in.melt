@@ -1,0 +1,66 @@
+# MLSI training data: melt snapshots and the equilibrated liquid for the melt-quench.
+#   random packing -> melt at ${T1} -> NPT at ${T1},P (snapshots) -> cool to ${T2} -> NPT at ${T2},P
+#   (snapshots) -> write the ${T2} liquid (start of the quench, in.quench).
+# Required: -var data <file> -var pot BKS|SHIK -var P <GPa> -var seed <int>
+#           -var dump1 <file> -var dump2 <file> -var liquid <file>
+# Optional: -var potdir -var T1 (5000) -var T2 (4000) -var neq (30000) -var ncool (10000)
+#           -var nprod (1000) -var nevery (2)
+
+variable        potdir index potentials
+variable        T1     index 5000
+variable        T2     index 4000
+variable        neq    index 30000
+variable        ncool  index 10000
+variable        nprod  index 1000
+variable        nevery index 2
+
+units           metal
+atom_style      charge
+boundary        p p p
+read_data       ${data}
+include         ${potdir}/${pot}.mod
+timestep        0.001
+
+variable        pbar equal ${P}*10000.0
+# diagnostics: mean Si-O coordination (2.2 A) and MSD (liquid check)
+group           si type 1
+compute         cn si coord/atom cutoff 2.2 2
+compute         cnsi si reduce ave c_cn
+compute         msd all msd com yes
+thermo_style    custom step temp press pe vol density c_cnsi c_msd[4]
+thermo          1000
+thermo_modify   flush yes
+
+# remove close contacts of the random packing, then melt at constant volume
+minimize        0.0 1.0e-4 500 5000
+reset_timestep  0
+velocity        all create ${T1} ${seed} mom yes rot yes dist gaussian
+fix             lim all nve/limit 0.05
+fix             lan all langevin ${T1} ${T1} 0.1 ${seed}
+run             2000
+unfix           lim
+unfix           lan
+
+# liquid at T1 and the target pressure
+fix             md all npt temp ${T1} ${T1} 0.1 iso ${pbar} ${pbar} 1.0
+run             ${neq}
+reset_timestep  0
+dump            snap1 all custom ${nevery} ${dump1} id type x y z
+dump_modify     snap1 sort id format line "%d %d %.4f %.4f %.4f" delay 1
+run             ${nprod}
+undump          snap1
+
+# liquid at T2
+unfix           md
+fix             md all npt temp ${T1} ${T2} 0.1 iso ${pbar} ${pbar} 1.0
+run             ${ncool}
+unfix           md
+fix             md all npt temp ${T2} ${T2} 0.1 iso ${pbar} ${pbar} 1.0
+run             ${neq}
+reset_timestep  0
+dump            snap2 all custom ${nevery} ${dump2} id type x y z
+dump_modify     snap2 sort id format line "%d %d %.4f %.4f %.4f" delay 1
+run             ${nprod}
+undump          snap2
+
+write_data      ${liquid}

@@ -59,7 +59,7 @@ class DGCNN_cls(nn.Module):
                 idx = DGCNN_cls.knn(x, k=k)  # (batch_size, num_points, k)
             else:
                 idx = DGCNN_cls.knn(x[:, 6:], k=k)
-        device = torch.device("cuda")
+        device = x.device  # the GPU of this process (DistributedDataParallel) or the CPU
         # print('Using GPU : ' + str(torch.cuda.current_device()) + ' from ' + str(torch.cuda.device_count()) + ' devices')
 
         idx_base = (

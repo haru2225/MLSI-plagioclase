@@ -1,0 +1,110 @@
+#------------------------------------------------------------------------------
+#$Date: 2023-05-18 10:14:51 +0300 (Thu, 18 May 2023) $
+#$Revision: 283850 $
+#$URL: file:///home/coder/svn-repositories/_RELOADED_COD/cod-reloaded/cif/9/00/07/9000707.cif $
+#------------------------------------------------------------------------------
+#
+# This file is available in the Crystallography Open Database (COD),
+# http://www.crystallography.net/. The original data for this entry
+# were provided the American Mineralogist Crystal Structure Database,
+# http://rruff.geo.arizona.edu/AMS/amcsd.php
+#
+# The file may be used within the scientific community so long as
+# proper attribution is given to the journal article from which the
+# data were obtained.
+#
+data_9000707
+loop_
+_publ_author_name
+'Winter, J. K.'
+'Okamura, F. P.'
+'Ghose, S.'
+_publ_section_title
+;
+ A high-temperature structural study of high albite, monalbite, and the
+ analbite - monalbite phase transition
+ T = 980 C, sample = monalbite
+ Note: this sample of feldspar is from Tiburon, Marin County, California, USA
+;
+_journal_name_full               'American Mineralogist'
+_journal_page_first              409
+_journal_page_last               423
+_journal_volume                  64
+_journal_year                    1979
+_chemical_formula_sum            'Al Na O8 Si3'
+_chemical_name_mineral           Albite
+_space_group_IT_number           12
+_symmetry_space_group_name_Hall  '-C 2y'
+_symmetry_space_group_name_H-M   'C 1 2/m 1'
+_cell_angle_alpha                90
+_cell_angle_beta                 116.13
+_cell_angle_gamma                90
+_cell_formula_units_Z            4
+_cell_length_a                   8.274
+_cell_length_b                   12.991
+_cell_length_c                   7.144
+_cell_volume                     689.410
+_diffrn_ambient_temperature      1253.15
+_exptl_crystal_density_diffrn    2.526
+_cod_original_formula_sum        'Na (Si3 Al) O8'
+_cod_database_code               9000707
+loop_
+_symmetry_equiv_pos_as_xyz
+x,y,z
+1/2+x,1/2+y,z
+x,-y,z
+1/2+x,1/2-y,z
+-x,y,-z
+1/2-x,1/2+y,-z
+-x,-y,-z
+1/2-x,1/2-y,-z
+loop_
+_atom_site_aniso_label
+_atom_site_aniso_U_11
+_atom_site_aniso_U_22
+_atom_site_aniso_U_33
+_atom_site_aniso_U_12
+_atom_site_aniso_U_13
+_atom_site_aniso_U_23
+Na 0.06821 0.22315 0.16151 0.00000 0.02703 0.00000
+Si1 0.03159 0.03591 0.02647 -0.00538 0.01279 -0.00084
+Al1 0.03159 0.03591 0.02647 -0.00538 0.01279 -0.00084
+Si2 0.02907 0.02992 0.03314 -0.00244 0.01134 -0.00084
+Al2 0.02907 0.02992 0.03314 -0.00244 0.01134 -0.00084
+Oa1 0.07995 0.06156 0.03751 0.00000 0.02969 0.00000
+Oa2 0.03970 0.03249 0.05460 0.00000 0.01255 0.00000
+Ob 0.05116 0.08635 0.07732 -0.01760 0.03934 0.00084
+Oc 0.04920 0.04104 0.06877 -0.00929 0.02052 -0.00549
+Od 0.05395 0.07267 0.03835 0.01173 0.00507 0.01013
+loop_
+_atom_site_label
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+_atom_site_occupancy
+_atom_site_type_symbol
+_atom_site_attached_hydrogens
+Na 0.27890 0.00000 0.13780 1.00000 Na 0
+Si1 0.00810 0.17840 0.22330 0.75000 Si 0
+Al1 0.00810 0.17840 0.22330 0.25000 Al 0
+Si2 0.69590 0.11630 0.34200 0.75000 Si 0
+Al2 0.69590 0.11630 0.34200 0.25000 Al 0
+Oa1 0.00000 0.13930 0.00000 1.00000 O 0
+Oa2 0.60630 0.00000 0.28350 1.00000 O 0
+Ob 0.82330 0.13500 0.22520 1.00000 O 0
+Oc 0.02570 0.30440 0.25350 1.00000 O 0
+Od 0.18910 0.12290 0.40490 1.00000 O 0
+loop_
+_cod_changelog_entry_id
+_cod_changelog_entry_author
+_cod_changelog_entry_date
+_cod_changelog_entry_text
+1
+;cod-tools version 3.8.0
+Id: cif_guess_AMCSD_atom_types 9581 2023-05-17 12:35:41Z saulius
+;
+2023-05-18T08:39:13+03:00
+;Derived atom types and hydrogen counts
+from atom names that follow the AMCSD naming convention
+(Wat == water, O-H == hydroxyl).
+;

@@ -1,0 +1,41 @@
+# MLSI training data: amorphous snapshots during isothermal (de)compression of a glass model.
+#   glass (from in.quench) -> NPT at T,P0 -> NPT at T with the target pressure ramped P0 -> P1 at
+#   ${prate} GPa/ps; ${nframes} snapshots are dumped evenly during the ramp.
+# Required: -var glass <file> -var pot BKS|SHIK -var T <K> -var P0 <GPa> -var P1 <GPa>
+#           -var seed <int> -var dump <file>
+# Optional: -var potdir -var prate (0.1 GPa/ps) -var neq (20000) -var nframes (500)
+
+variable        potdir  index potentials
+variable        prate   index 0.1
+variable        neq     index 20000
+variable        nframes index 500
+
+units           metal
+atom_style      charge
+boundary        p p p
+read_data       ${glass}
+include         ${potdir}/${pot}.mod
+timestep        0.001
+
+variable        p0bar equal ${P0}*10000.0
+variable        p1bar equal ${P1}*10000.0
+variable        nramp equal round(abs(${P1}-${P0})/${prate}/dt)
+variable        nevery equal round(${nramp}/${nframes})
+# diagnostics: mean Si-O coordination (2.2 A)
+group           si type 1
+compute         cn si coord/atom cutoff 2.2 2
+compute         cnsi si reduce ave c_cn
+thermo_style    custom step temp press pe vol density c_cnsi
+thermo          10000
+thermo_modify   flush yes
+
+velocity        all create ${T} ${seed} mom yes rot yes dist gaussian
+fix             md all npt temp ${T} ${T} 0.1 iso ${p0bar} ${p0bar} 1.0
+run             ${neq}
+unfix           md
+
+reset_timestep  0
+dump            snap all custom ${nevery} ${dump} id type x y z
+dump_modify     snap sort id format line "%d %d %.4f %.4f %.4f" delay 1
+fix             md all npt temp ${T} ${T} 0.1 iso ${p0bar} ${p1bar} 1.0
+run             ${nramp}

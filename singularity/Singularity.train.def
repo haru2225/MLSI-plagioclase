@@ -1,0 +1,30 @@
+Bootstrap: docker
+From: pytorch/pytorch:2.5.0-cuda12.4-cudnn9-runtime
+
+%labels
+    Author haru2225
+    Description MLSI (DG-CNN) training for plagioclase phases: PyTorch 2.5.0 CUDA 12.4 + OVITO 3.10.1 (data extraction) + h5py (multi-GPU training)
+
+%post
+    # Shared libraries that OVITO's bundled Qt (PySide6) needs to import, even headless.
+    apt-get update
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        libglib2.0-0 libgl1 libegl1 libopengl0 libxkbcommon0 \
+        libfontconfig1 libdbus-1-3
+    rm -rf /var/lib/apt/lists/*
+
+    # Keep the CUDA 12.4 build of torch 2.5.0 from the base image (do not install torch again).
+    python -m pip install --no-cache-dir \
+        "numpy==1.26.4" "scipy<2" h5py tqdm pyyaml scikit-learn traits \
+        "ovito==3.10.1"
+
+%environment
+    export PYTHONNOUSERSITE=1
+    export PYTHONUNBUFFERED=1
+    export QT_QPA_PLATFORM=offscreen
+
+%runscript
+    exec python "$@"
+
+%test
+    python -c "import torch, h5py, numpy, scipy, ovito; print('torch', torch.__version__, 'CUDA', torch.version.cuda, 'ovito', ovito.version)"

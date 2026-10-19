@@ -1,0 +1,20 @@
+#!/bin/bash
+#PBS -q sg8
+#PBS -P projectname
+#PBS -N mlsi_extract
+#PBS -l walltime=12:00:00
+#PBS -l select=1:ncpus=4:mem=32gb
+#PBS -j oe
+#PBS -J 0-18
+
+# Step 1: one array task per label (19 folders of md_training_data) -> 1000000_<POINTS>/training_<label>_1000000_<POINTS>.npy
+# (1e6 local environments per label; CPU only.)  Submit with:  qsub pbs/01_extract.pbs
+set -eu
+. "$PBS_O_WORKDIR/pbs/common.sh"
+
+LABELS=(plagioclase jadeite lingunite grossular kyanite andalusite sillimanite corundum casio3_perovskite cas_phase
+        cf_naalsio4 quartz coesite tridymite cristobalilte stishovite seifertite melt amorphous)
+LABEL="${LABELS[${PBS_ARRAY_INDEX:?}]}"
+[ -d "$DATA_ROOT/md_training_data/$LABEL" ] || { echo "ERROR: no md_training_data/$LABEL" >&2; exit 1; }
+echo "label $LABEL, $POINTS points"
+run python -u "$PBS_O_WORKDIR/scripts/extract_data.py" "$LABEL" "$POINTS"

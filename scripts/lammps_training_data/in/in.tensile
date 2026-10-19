@@ -1,0 +1,44 @@
+# MLSI training data: amorphous snapshots during uniaxial tension of a glass model up to fracture.
+#   glass (from in.quench) -> NPT at T, 0 GPa -> tension along z at a constant engineering strain rate
+#   with stress-free lateral directions (NPT in x and y); ${nframes} snapshots during the deformation.
+# Required: -var glass <file> -var pot BKS|SHIK -var T <K> -var seed <int> -var dump <file>
+# Optional: -var potdir -var erate (0.01 1/ps = 1e10 1/s) -var strain (0.6) -var neq (20000) -var nframes (500)
+
+variable        potdir  index potentials
+variable        erate   index 0.01
+variable        strain  index 0.6
+variable        neq     index 20000
+variable        nframes index 500
+
+units           metal
+atom_style      charge
+boundary        p p p
+read_data       ${glass}
+include         ${potdir}/${pot}.mod
+timestep        0.001
+
+variable        nrun equal round(${strain}/${erate}/dt)
+variable        nevery equal round(${nrun}/${nframes})
+# diagnostics: mean Si-O coordination (2.2 A), strain and stress along z (GPa)
+group           si type 1
+compute         cn si coord/atom cutoff 2.2 2
+compute         cnsi si reduce ave c_cn
+thermo_style    custom step temp press pe vol density lz pzz c_cnsi
+thermo          1000
+thermo_modify   flush yes
+
+velocity        all create ${T} ${seed} mom yes rot yes dist gaussian
+fix             md all npt temp ${T} ${T} 0.1 iso 0.0 0.0 1.0
+run             ${neq}
+unfix           md
+
+reset_timestep  0
+variable        lz0 equal $(lz)
+variable        ezz equal (lz-v_lz0)/v_lz0
+variable        szz equal -pzz/10000.0
+thermo_style    custom step temp press pe vol density v_ezz v_szz c_cnsi
+dump            snap all custom ${nevery} ${dump} id type x y z
+dump_modify     snap sort id format line "%d %d %.4f %.4f %.4f" delay 1
+fix             md all npt temp ${T} ${T} 0.1 x 0.0 0.0 1.0 y 0.0 0.0 1.0
+fix             pull all deform 1 z erate ${erate} remap x
+run             ${nrun}

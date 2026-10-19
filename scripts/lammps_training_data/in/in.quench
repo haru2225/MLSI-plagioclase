@@ -1,0 +1,34 @@
+# MLSI training data: glass model by an NPT quench of the liquid written by in.melt.
+#   liquid at ${T2},P -> linear cooling to ${Tg} at ${rate} K/ps -> NPT anneal at ${Tg},P -> write glass
+# Required: -var liquid <file> -var pot BKS|SHIK -var P <GPa> -var rate <K/ps> -var glass <file>
+# Optional: -var potdir -var T2 (4000) -var Tg (300) -var nanneal (10000)
+
+variable        potdir  index potentials
+variable        T2      index 4000
+variable        Tg      index 300
+variable        nanneal index 10000
+
+units           metal
+atom_style      charge
+boundary        p p p
+read_data       ${liquid}
+include         ${potdir}/${pot}.mod
+timestep        0.001
+
+variable        pbar equal ${P}*10000.0
+variable        ncool equal round((${T2}-${Tg})/${rate}/dt)
+# diagnostics: mean Si-O coordination (2.2 A)
+group           si type 1
+compute         cn si coord/atom cutoff 2.2 2
+compute         cnsi si reduce ave c_cn
+thermo_style    custom step temp press pe vol density c_cnsi
+thermo          10000
+thermo_modify   flush yes
+
+fix             md all npt temp ${T2} ${Tg} 0.1 iso ${pbar} ${pbar} 1.0
+run             ${ncool}
+unfix           md
+fix             md all npt temp ${Tg} ${Tg} 0.1 iso ${pbar} ${pbar} 1.0
+run             ${nanneal}
+
+write_data      ${glass}

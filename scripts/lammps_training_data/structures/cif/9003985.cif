@@ -1,0 +1,97 @@
+#------------------------------------------------------------------------------
+#$Date: 2023-05-23 11:35:25 +0300 (Tue, 23 May 2023) $
+#$Revision: 283960 $
+#$URL: file:///home/coder/svn-repositories/_RELOADED_COD/cod-reloaded/cif/9/00/39/9003985.cif $
+#------------------------------------------------------------------------------
+#
+# This file is available in the Crystallography Open Database (COD),
+# http://www.crystallography.net/. The original data for this entry
+# were provided the American Mineralogist Crystal Structure Database,
+# http://rruff.geo.arizona.edu/AMS/amcsd.php
+#
+# The file may be used within the scientific community so long as
+# proper attribution is given to the journal article from which the
+# data were obtained.
+#
+data_9003985
+loop_
+_publ_author_name
+'Burt, J. B.'
+'Ross, N. L.'
+'Angel, R. J.'
+'Koch, M.'
+_publ_section_title
+;
+ Equations of state and structures of andalusite
+ to 9.8 GPa and sillimanite to 8.5 GPa
+ Sample: P = .0001 GPa
+;
+_journal_name_full               'American Mineralogist'
+_journal_page_first              319
+_journal_page_last               326
+_journal_paper_doi               10.2138/am.2006.1875
+_journal_volume                  91
+_journal_year                    2006
+_chemical_compound_source        'Okkamitiya Sabaragamuiwa province, Sri Lanka'
+_chemical_formula_sum            'Al2 O5 Si'
+_chemical_name_mineral           Sillimanite
+_space_group_IT_number           62
+_symmetry_space_group_name_Hall  '-P 2c 2ab'
+_symmetry_space_group_name_H-M   'P b n m'
+_cell_angle_alpha                90
+_cell_angle_beta                 90
+_cell_angle_gamma                90
+_cell_formula_units_Z            4
+_cell_length_a                   7.48388
+_cell_length_b                   7.6726
+_cell_length_c                   5.76807
+_cell_volume                     331.207
+_database_code_amcsd             0004109
+_diffrn_ambient_pressure         100
+_exptl_crystal_density_diffrn    3.250
+_cod_original_formula_sum        'Al2 Si O5'
+_cod_database_code               9003985
+loop_
+_space_group_symop_operation_xyz
+x,y,z
+x,y,1/2-z
+-x,-y,1/2+z
+1/2+x,1/2-y,1/2+z
+1/2-x,1/2+y,1/2-z
+1/2-x,1/2+y,z
+1/2+x,1/2-y,-z
+-x,-y,-z
+loop_
+_atom_site_label
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+_atom_site_U_iso_or_equiv
+_atom_site_type_symbol
+_atom_site_attached_hydrogens
+Al1 0.00000 0.00000 0.00000 0.00418 Al 0
+Al2 0.14181 0.34510 0.25000 0.00507 Al 0
+Si 0.15318 0.34070 0.75000 0.00494 Si 0
+OA 0.36070 0.40750 0.75000 0.00443 O 0
+OB 0.35720 0.43480 0.25000 0.00532 O 0
+OC 0.47620 0.00220 0.75000 0.01191 O 0
+OD 0.12580 0.22280 0.51510 0.00684 O 0
+loop_
+_cod_changelog_entry_id
+_cod_changelog_entry_author
+_cod_changelog_entry_date
+_cod_changelog_entry_text
+1
+;cod-tools version 3.8.0
+Id: cif_guess_AMCSD_atom_types 9581 2023-05-17 12:35:41Z saulius
+;
+2023-05-23T09:14:56+03:00
+;Derived atom types and hydrogen counts
+from atom names that follow the AMCSD naming convention
+(Wat == water, O-H == hydroxyl).
+;
+loop_
+_cod_related_entry_id
+_cod_related_entry_database
+_cod_related_entry_code
+1 AMCSD 0004109

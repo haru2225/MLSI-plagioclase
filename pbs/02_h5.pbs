@@ -1,0 +1,14 @@
+#!/bin/bash
+#PBS -q sg8
+#PBS -P projectname
+#PBS -N mlsi_h5
+#PBS -l walltime=04:00:00
+#PBS -l select=1:ncpus=4:mem=128gb
+#PBS -j oe
+
+# Step 2: collect the .npy files in 1000000_<POINTS>/ into numpy_data.h5 + (rev_)mapping.json.
+# Start after step 1:  qsub -W depend=afterokarray:<JOBID of step 1>[] pbs/02_h5.pbs
+set -eu
+. "$PBS_O_WORKDIR/pbs/common.sh"
+run python -u "$PBS_O_WORKDIR/scripts/numpy_data_to_h5.py" "1000000_$POINTS"
+cat "1000000_$POINTS/rev_mapping.json"

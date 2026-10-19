@@ -267,3 +267,17 @@ $RECYCLE.BIN/
 *.lnk
 
 # End of https://www.toptal.com/developers/gitignore/api/python,visualstudiocode,linux,macos,windows
+
+### MLSI-plagioclase: data and run products stay out of git (md_training_data goes to a GitHub Release)
+scripts/md_training_data/
+scripts/md_training_data_merged/
+scripts/lammps_training_data/logs/
+scripts/lammps_training_data/work/
+scripts/lammps_training_data/md_training_data/
+scripts/1000000_*/
+scripts/training/
+*.sif
+*.npy
+*.h5
+gpu_usage_*.csv
+*.o[0-9]*

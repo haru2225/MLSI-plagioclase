@@ -1,0 +1,98 @@
+#------------------------------------------------------------------------------
+#$Date: 2023-11-22 21:43:52 +0200 (Wed, 22 Nov 2023) $
+#$Revision: 287741 $
+#$URL: file:///home/coder/svn-repositories/_RELOADED_COD/cod-reloaded/cif/8/10/45/8104539.cif $
+#------------------------------------------------------------------------------
+#
+# This file is available in the Crystallography Open Database (COD),
+# http://www.crystallography.net/
+#
+# All data on this site have been placed in the public domain by the
+# contributors.
+#
+data_8104539
+loop_
+_publ_author_name
+'Kihara, K.'
+'Matsumoto, T.'
+'Imamura, M.'
+_publ_section_title
+;
+ Structural change of orthorhombic-I tridymite with temperature: A study
+ based on second-order thermal-vibrational parameters : HP structure at
+ 693 K
+;
+_journal_name_full               'Zeitschrift fur Kristallographie'
+_journal_page_first              27
+_journal_page_last               38
+_journal_volume                  177
+_journal_year                    1986
+_chemical_formula_sum            'O2 Si'
+_chemical_name_common            tridymite
+_chemical_name_mineral           Tridymite
+_space_group_IT_number           194
+_space_group_name_H-M_alt        'P 63/m m c'
+_symmetry_space_group_name_Hall  '-P 6c 2c'
+_symmetry_space_group_name_H-M   'P 63/m m c'
+_cell_angle_alpha                90
+_cell_angle_beta                 90
+_cell_angle_gamma                120
+_cell_formula_units_Z            4
+_cell_length_a                   5.052(9)
+_cell_length_b                   5.052(9)
+_cell_length_c                   8.27(2)
+_cell_volume                     182.8(6)
+_diffrn_ambient_temperature      693
+_cod_data_source_file            tridymite-HP-693K.cif
+_cod_data_source_block           tridymite-HP-773K
+_cod_original_formula_sum        'Si O2'
+_cod_database_code               8104539
+loop_
+_space_group_symop_operation_xyz
+'x, y, z'
+'-x, -y, -z'
+'-y, x-y, z'
+'y, -x+y, -z'
+'-x+y, -x, z'
+'x-y, x, -z'
+'-x, -y, z+1/2'
+'x, y, -z+1/2'
+'y, -x+y, z+1/2'
+'-y, x-y, -z+1/2'
+'x-y, x, z+1/2'
+'-x+y, -x, -z+1/2'
+'y, x, -z'
+'-y, -x, z'
+'x-y, -y, -z'
+'-x+y, y, z'
+'-x, -x+y, -z'
+'x, x-y, z'
+'-y, -x, -z+1/2'
+'y, x, z+1/2'
+'-x+y, y, -z+1/2'
+'x-y, -y, z+1/2'
+'x, x-y, -z+1/2'
+'-x, -x+y, z+1/2'
+loop_
+_atom_site_label
+_atom_site_occupancy
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+_atom_site_adp_type
+_atom_site_B_iso_or_equiv
+_atom_site_type_symbol
+Si 1.0 0.333333 0.666667 0.4378(4) Biso 3.470556 Si
+O1 1.0 0.333333 0.666667 0.250000 Biso 8.389153 O
+O2 1.0 0.000000 0.500000 0.000000 Biso 9.672602 O
+loop_
+_atom_site_aniso_label
+_atom_site_aniso_U_11
+_atom_site_aniso_U_22
+_atom_site_aniso_U_33
+_atom_site_aniso_U_12
+_atom_site_aniso_U_13
+_atom_site_aniso_U_23
+Si 0.04587 0.04587 0.04019 0.02298 0.00000 0.00000
+O1 0.13896 0.13896 0.04088 0.06953 0.00000 0.00000
+O2 0.05595 0.14090 0.14240 0.02803 -0.04894 -0.02456

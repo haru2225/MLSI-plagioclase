@@ -1,0 +1,43 @@
+# MLSI training data: snapshots of a crystal at constant T and P.
+#   minimize (box relaxed at P) -> NPT equilibration -> NPT production, dump every ${nevery} steps.
+# Required: -var data <file> -var pot BKS|SHIK -var T <K> -var P <GPa> -var seed <int> -var dump <file>
+# Optional: -var potdir <dir> -var neq <steps> -var nprod <steps> -var nevery <steps>
+
+variable        potdir index potentials
+variable        neq    index 10000
+variable        nprod  index 1000
+variable        nevery index 2
+
+units           metal
+atom_style      charge
+boundary        p p p
+read_data       ${data}
+include         ${potdir}/${pot}.mod
+timestep        0.001
+
+variable        pbar equal ${P}*10000.0
+# diagnostics: mean Si-O coordination (2.2 A) and MSD from the minimized structure
+group           si type 1
+compute         cn si coord/atom cutoff 2.2 2
+compute         cnsi si reduce ave c_cn
+thermo_style    custom step temp press pe vol density lx ly lz xy xz yz c_cnsi
+thermo          1000
+thermo_modify   flush yes
+
+fix             relax all box/relax tri ${pbar} vmax 0.001
+minimize        0.0 1.0e-6 2000 20000
+unfix           relax
+reset_timestep  0
+
+compute         msd all msd com yes
+thermo_style    custom step temp press pe vol density lx ly lz xy xz yz c_cnsi c_msd[4]
+velocity        all create ${T} ${seed} mom yes rot yes dist gaussian
+fix             md all npt temp ${T} ${T} 0.1 tri ${pbar} ${pbar} 1.0
+run             ${neq}
+
+# production: first snapshot at step ${nevery}, i.e. nprod/nevery snapshots
+reset_timestep  0
+dump            snap all custom ${nevery} ${dump} id type x y z
+dump_modify     snap sort id format line "%d %d %.4f %.4f %.4f" delay 1
+thermo          100
+run             ${nprod}

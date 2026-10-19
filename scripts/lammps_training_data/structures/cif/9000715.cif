@@ -1,0 +1,113 @@
+#------------------------------------------------------------------------------
+#$Date: 2025-11-01 14:29:51 +0200 (Sat, 01 Nov 2025) $
+#$Revision: 303136 $
+#$URL: file:///home/coder/svn-repositories/_RELOADED_COD/cod-reloaded/cif/9/00/07/9000715.cif $
+#------------------------------------------------------------------------------
+#
+# This file is available in the Crystallography Open Database (COD),
+# http://www.crystallography.net/. The original data for this entry
+# were provided the American Mineralogist Crystal Structure Database,
+# http://rruff.geo.arizona.edu/AMS/amcsd.php
+#
+# The file may be used within the scientific community so long as
+# proper attribution is given to the journal article from which the
+# data were obtained.
+#
+data_9000715
+loop_
+_publ_author_name
+'Winter, J. K.'
+'Ghose, S.'
+_publ_section_title
+;
+ Thermal expansion and high-temperature crystal chemistry of the Al2SiO5
+ polymorphs
+ T = 25 deg C
+;
+_journal_name_full               'American Mineralogist'
+_journal_page_first              573
+_journal_page_last               586
+_journal_volume                  64
+_journal_year                    1979
+_chemical_formula_sum            'Al2 O5 Si'
+_chemical_name_mineral           Andalusite
+_space_group_IT_number           58
+_symmetry_space_group_name_Hall  '-P 2 2n'
+_symmetry_space_group_name_H-M   'P n n m'
+_cell_angle_alpha                90
+_cell_angle_beta                 90
+_cell_angle_gamma                90
+_cell_formula_units_Z            4
+_cell_length_a                   7.7980
+_cell_length_b                   7.9031
+_cell_length_c                   5.5566
+_cell_volume                     342.444
+_database_code_amcsd             0000728
+_diffrn_ambient_temperature      298.15
+_exptl_crystal_density_diffrn    3.143
+_cod_original_formula_sum        'Al2 Si O5'
+_cod_database_code               9000715
+loop_
+_space_group_symop_operation_xyz
+x,y,z
+1/2+x,1/2-y,1/2+z
+1/2-x,1/2+y,1/2-z
+1/2-x,1/2+y,1/2+z
+1/2+x,1/2-y,1/2-z
+x,y,-z
+-x,-y,z
+-x,-y,-z
+loop_
+_atom_site_aniso_label
+_atom_site_aniso_U_11
+_atom_site_aniso_U_22
+_atom_site_aniso_U_33
+_atom_site_aniso_U_12
+_atom_site_aniso_U_13
+_atom_site_aniso_U_23
+Al1 0.00647 0.00918 0.00360 0.00156 0.00000 0.00000
+Al2 0.00277 0.00823 0.00438 0.00000 0.00000 0.00000
+Si 0.00216 0.00759 0.00391 0.00000 0.00000 0.00000
+Oa 0.00339 0.00981 0.00485 -0.00187 0.00000 0.00000
+Ob 0.00308 0.00854 0.01345 0.00062 0.00000 0.00000
+Oc 0.00555 0.00886 0.00469 -0.00094 0.00000 0.00000
+Od 0.00493 0.01013 0.00469 -0.00125 -0.00088 0.00111
+loop_
+_atom_site_label
+_atom_site_fract_x
+_atom_site_fract_y
+_atom_site_fract_z
+_atom_site_type_symbol
+_atom_site_attached_hydrogens
+Al1 0.00000 0.00000 0.24190 Al 0
+Al2 0.37050 0.13910 0.50000 Al 0
+Si 0.24600 0.25200 0.00000 Si 0
+Oa 0.42460 0.36290 0.00000 O 0
+Ob 0.10300 0.40030 0.00000 O 0
+Oc 0.42330 0.36290 0.50000 O 0
+Od 0.23050 0.13390 0.23940 O 0
+loop_
+_cod_changelog_entry_id
+_cod_changelog_entry_author
+_cod_changelog_entry_date
+_cod_changelog_entry_text
+1
+;cod-tools version 3.8.0
+Id: cif_guess_AMCSD_atom_types 9581 2023-05-17 12:35:41Z saulius
+;
+2023-05-18T08:39:14+03:00
+;Derived atom types and hydrogen counts
+from atom names that follow the AMCSD naming convention
+(Wat == water, O-H == hydroxyl).
+;
+loop_
+_cod_related_entry_id
+_cod_related_entry_database
+_cod_related_entry_code
+1 AMCSD 0000728
+2 ROD 1000198
+3 ROD 1000200
+4 ROD 1000210
+5 ROD 1000367
+6 ROD 1000368
+7 ROD 1000372

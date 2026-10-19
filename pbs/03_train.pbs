@@ -1,0 +1,38 @@
+#!/bin/bash
+#PBS -q sg8
+#PBS -P projectname
+#PBS -N mlsi_train
+#PBS -l walltime=24:00:00
+#PBS -l select=1:ncpus=32:mpiprocs=1:ompthreads=1:mem=256gb:ngpus=8
+#PBS -j oe
+
+# Step 3: multi-GPU training (DistributedDataParallel, one process per GPU).
+#   - Change ngpus=8 above to the GPUs you want to use (they must be on one node); NGPUS is read from the job.
+#   - Per-GPU batch size BATCH (default 512); the learning rate is scaled with sqrt(#GPUs).  With 8 GPUs the
+#     effective batch is 4096, which fills an A100/H100 much better than the original 128.
+#   - bf16 autocast is on by default (AMP=0 switches it off).
+# Start after step 2:  qsub -W depend=afterok:<JOBID of step 2> pbs/03_train.pbs
+set -eu
+. "$PBS_O_WORKDIR/pbs/common.sh"
+
+NGPUS="${NGPUS:-$(nvidia-smi -L | wc -l)}"
+BATCH="${BATCH:-512}"
+EPOCHS="${EPOCHS:-250}"
+AMP="${AMP:-1}"
+OUT="${OUT:-$DATA_ROOT/training/$(date +%Y%m%d-%H%M%S)_${POINTS}pts}"
+SCRATCH="${SCRATCH:-${TMPDIR:-/tmp}}"      # node-local disk for the 15 GB h5 file
+export OMP_NUM_THREADS=1 MKL_NUM_THREADS=1
+export NCCL_DEBUG=WARN PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+
+GPU_LOG="$DATA_ROOT/gpu_usage_${PBS_JOBID//[^A-Za-z0-9._-]/_}.csv"
+nvidia-smi --query-gpu=timestamp,index,name,utilization.gpu,memory.used,memory.total,power.draw \
+    --format=csv -l 30 > "$GPU_LOG" &
+MON=$!
+trap 'kill $MON 2>/dev/null || true' EXIT
+
+nvidia-smi
+echo "GPUs: $NGPUS, per-GPU batch $BATCH, points $POINTS, out $OUT"
+AMPFLAG=""; [ "$AMP" = 1 ] && AMPFLAG="--amp"
+run torchrun --standalone --nproc_per_node="$NGPUS" "$PBS_O_WORKDIR/scripts/train_ddp.py" \
+    --points "$POINTS" --data-dir "1000000_$POINTS" --epochs "$EPOCHS" --batch-size "$BATCH" \
+    --lr "${LR:-0.001}" --lr-scaling sqrt $AMPFLAG --scratch "$SCRATCH" --out "$OUT"
