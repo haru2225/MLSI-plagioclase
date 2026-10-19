@@ -1,0 +1,66 @@
+#!/bin/bash
+#PBS -q sg8
+#PBS -N mlsi
+#PBS -l walltime=48:00:00
+#PBS -l select=1:ncpus=16:mpiprocs=1:ompthreads=1:mem=128gb:ngpus=4
+#PBS -j oe
+
+# The whole pipeline in one job:  qsub -P run mlsi.pbs
+#   1. extract 1e6 local environments per label (OVITO, CPU, labels in parallel)
+#   2. collect them into numpy_data.h5
+#   3. train the DG-CNN on all GPUs of the job (DistributedDataParallel)
+# Data: scripts/md_training_data (or scripts/md_training_data_merged).  Finished steps are skipped on a restart.
+# Other resources, e.g.:  qsub -P run -l select=1:ncpus=32:mpiprocs=1:ompthreads=1:mem=256gb:ngpus=8 mlsi.pbs
+# Options (qsub -v NAME=value,...): POINTS=64 BATCH=512 EPOCHS=250 AMP=1 LR=0.001 SIF_IMAGE=<.sif>
+set -eu
+. "$PBS_O_WORKDIR/pbs/common.sh"
+
+LABELS=(plagioclase jadeite lingunite grossular kyanite andalusite sillimanite corundum casio3_perovskite cas_phase
+        cf_naalsio4 quartz coesite tridymite cristobalilte stishovite seifertite melt amorphous)
+NCPUS="${NCPUS:-${PBS_NCPUS:-$(nproc)}}"
+NPAR=$(( NCPUS / 2 )); [ "$NPAR" -ge 1 ] || NPAR=1
+NGPUS="${NGPUS:-$(nvidia-smi -L | wc -l)}"
+BATCH="${BATCH:-512}"; EPOCHS="${EPOCHS:-250}"; AMP="${AMP:-1}"
+OUT="${OUT:-$DATA_ROOT/training/$(date +%Y%m%d-%H%M%S)_${POINTS}pts}"
+SCRATCH="${SCRATCH:-${TMPDIR:-/tmp}}"
+H5DIR="$DATA_ROOT/1000000_$POINTS"
+mkdir -p "$H5DIR" "$DATA_ROOT/logs"
+echo "job $PBS_JOBID: $NCPUS cpus, $NGPUS GPUs, points $POINTS, data $DATA_ROOT/md_training_data"
+nvidia-smi
+
+# ---- 1. extract (CPU) -------------------------------------------------------------------------------------------
+export OMP_NUM_THREADS=2
+pids=(); names=()
+for L in "${LABELS[@]}"; do
+    [ -d "$DATA_ROOT/md_training_data/$L" ] || { echo "ERROR: no md_training_data/$L" >&2; exit 1; }
+    if [ -f "$H5DIR/training_${L}_1000000_${POINTS}.npy" ] || [ -f "$H5DIR/numpy_data.h5" ]; then
+        echo "skip extract $L"; continue
+    fi
+    while [ "$(jobs -rp | wc -l)" -ge "$NPAR" ]; do sleep 5; done
+    echo "extract $L"
+    run python -u "$PBS_O_WORKDIR/scripts/extract_data.py" "$L" "$POINTS" > "$DATA_ROOT/logs/extract_$L.log" 2>&1 &
+    pids+=($!); names+=("$L")
+done
+fail=0
+for i in "${!pids[@]}"; do
+    wait "${pids[$i]}" || { echo "ERROR: extract ${names[$i]} failed, see logs/extract_${names[$i]}.log" >&2; fail=1; }
+done
+[ "$fail" = 0 ] || exit 1
+
+# ---- 2. h5 --------------------------------------------------------------------------------------------------------
+if [ ! -f "$H5DIR/numpy_data.h5" ]; then
+    run python -u "$PBS_O_WORKDIR/scripts/numpy_data_to_h5.py" "1000000_$POINTS"
+fi
+cat "$H5DIR/rev_mapping.json"; echo
+
+# ---- 3. train (GPU) ------------------------------------------------------------------------------------------------
+export OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 NCCL_DEBUG=WARN PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+nvidia-smi --query-gpu=timestamp,index,name,utilization.gpu,memory.used,memory.total,power.draw --format=csv -l 30 \
+    > "$DATA_ROOT/gpu_usage_${PBS_JOBID//[^A-Za-z0-9._-]/_}.csv" &
+MON=$!
+trap 'kill $MON 2>/dev/null || true' EXIT
+AMPFLAG=""; [ "$AMP" = 1 ] && AMPFLAG="--amp"
+run torchrun --standalone --nproc_per_node="$NGPUS" "$PBS_O_WORKDIR/scripts/train_ddp.py" \
+    --points "$POINTS" --data-dir "1000000_$POINTS" --epochs "$EPOCHS" --batch-size "$BATCH" \
+    --lr "${LR:-0.001}" --lr-scaling sqrt $AMPFLAG --scratch "$SCRATCH" --out "$OUT"
+echo "done: $OUT"

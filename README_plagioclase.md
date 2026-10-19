@@ -29,10 +29,18 @@ cd scripts && for f in md_training_data_*.tar.gz; do tar xzf "$f"; done  # creat
 ## Train on the cluster
 
 ```bash
-singularity build --fakeroot mlsi-train-pytorch-2.5.0-cu124.sif singularity/Singularity.train.def
-# set `#PBS -P` (project) and, if needed, the queue and ngpus in pbs/*.pbs
-bash pbs/submit_all.sh                 # POINTS=64 by default
+git clone https://github.com/haru2225/MLSI-plagioclase.git && cd MLSI-plagioclase
+cp -r /path/to/md_training_data_merged scripts/        # or the Release archives, see above
+singularity build --fakeroot mlsi-train-pytorch-2.5.0-cu124.sif singularity/Singularity.train.def   # once
+qsub -P <project> mlsi.pbs
 ```
+
+`mlsi.pbs` runs everything in one job: extraction of 1e6 local environments per label, the h5 file and the
+multi-GPU training (all GPUs of the job). Resources can be changed on the command line, e.g.
+`qsub -P <project> -l select=1:ncpus=32:mpiprocs=1:ompthreads=1:mem=256gb:ngpus=8 mlsi.pbs`, options with
+`-v POINTS=64,BATCH=512,EPOCHS=250,AMP=1`. Finished steps are skipped when the job is submitted again.
+The three-job version (`pbs/submit_all.sh`) does the same in separate jobs.
+The result is in `scripts/training/<date>_64pts/` (`torch_checkpoint_best.tar`, `settings.json`).
 
 Notes on the data: the `melt` and `amorphous` classes were used as generated; the SiO2 melt/glass files
 (`SiO2_*`) were computed with BKS, all crystals with SHIK. The `amorphous` set is partial (30 of the 80 planned files). Two 1 GPa tridymite files were dropped because the structure collapsed.

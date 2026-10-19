@@ -73,16 +73,18 @@ def load_data(h5name, mapname, n_samples, rank):
     with open(mapname.replace("rev_", "")) as f:
         mapping = {int(k): v for k, v in json.load(f).items()}
     names = list(rev_mapping)
-    xs, ys = [], []
     with h5py.File(h5name, "r") as hf:
-        for name in names:
+        shape = hf[names[0]].shape[1:]
+        x = np.empty((len(names) * n_samples,) + shape, dtype=np.float32)  # filled in place: no second copy
+        y = np.empty(len(names) * n_samples, dtype=np.int64)
+        for i, name in enumerate(names):
             n = len(hf[name])
             assert n >= n_samples, f"{name}: {n} samples < --n-samples {n_samples}"
-            xs.append(hf[name][:n_samples])  # numpy_data_to_h5.py stores each class shuffled
-            ys.append(np.full(n_samples, rev_mapping[name], dtype=np.int64))
+            hf[name].read_direct(x, np.s_[:n_samples], np.s_[i * n_samples:(i + 1) * n_samples])
+            y[i * n_samples:(i + 1) * n_samples] = rev_mapping[name]
             if rank == 0:
                 print(f"  {rev_mapping[name]:3d} {name:20s} {n} samples", flush=True)
-    return torch.from_numpy(np.concatenate(xs)), torch.from_numpy(np.concatenate(ys)), mapping
+    return torch.from_numpy(x), torch.from_numpy(y), mapping
 
 
 def random_rotations(n, device, gen):
