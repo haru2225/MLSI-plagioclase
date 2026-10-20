@@ -117,16 +117,31 @@ def main():
 
     data_dir = args.data_dir or f"1000000_{args.points}"
     h5name = os.path.join(data_dir, "numpy_data.h5")
+    tmp_copy = None
     if args.scratch and os.path.isdir(args.scratch):
-        local = os.path.join(args.scratch, f"mlsi_{os.environ.get('LOCAL_RANK', 0)}_numpy_data.h5")
-        if not os.path.exists(local):
-            shutil.copy(h5name, local)
-        h5name = local
+        # one copy per node (not per GPU), only if the node-local disk has room for it; removed after the data is loaded
+        tmp_copy = os.path.join(args.scratch, f"mlsi_{os.environ.get('PBS_JOBID', os.getpid())}_numpy_data.h5")
+        if int(os.environ.get("LOCAL_RANK", 0)) == 0:
+            need = os.path.getsize(h5name) * 1.2
+            if shutil.disk_usage(args.scratch).free > need:
+                shutil.copy(h5name, tmp_copy)
+            else:
+                print(f"not enough space in {args.scratch}: reading {h5name} directly", flush=True)
+        if world > 1:
+            dist.barrier()
+        if os.path.exists(tmp_copy):
+            h5name = tmp_copy
+        else:
+            tmp_copy = None
 
     if rank == 0:
         print(f"GPUs: {world} x {torch.cuda.get_device_name(device) if device.type == 'cuda' else 'CPU'}", flush=True)
     x_all, y_all, mapping = load_data(h5name, os.path.join(data_dir, "rev_mapping.json"), args.n_samples, rank)
     n_classes = len(mapping)
+    if world > 1:
+        dist.barrier()  # every rank has read the file
+    if tmp_copy and int(os.environ.get("LOCAL_RANK", 0)) == 0 and os.path.exists(tmp_copy):
+        os.remove(tmp_copy)
 
     # the same train/validation split on every GPU
     g = torch.Generator().manual_seed(args.seed)
