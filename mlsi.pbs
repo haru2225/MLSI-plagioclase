@@ -54,7 +54,7 @@ fi
 cat "$H5DIR/rev_mapping.json"; echo
 
 # ---- 3. train (GPU) ------------------------------------------------------------------------------------------------
-export OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 NCCL_DEBUG=WARN PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+export OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 NCCL_DEBUG=WARN
 nvidia-smi --query-gpu=timestamp,index,name,utilization.gpu,memory.used,memory.total,power.draw --format=csv -l 30 \
     > "$DATA_ROOT/gpu_usage_${PBS_JOBID//[^A-Za-z0-9._-]/_}.csv" &
 MON=$!
