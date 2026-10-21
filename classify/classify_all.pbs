@@ -9,11 +9,11 @@
 #   qsub -P run classify/classify_all.pbs                                   # one task, all files
 #   qsub -P run -J 0-3 -v NTASKS=4 classify/classify_all.pbs                # 4 GPUs: task i takes files i, i+4, ...
 # Progress (live):   tail -f classify/results/logs/<file>.log        and     cat classify/results/progress_*.txt
-# Options (-v): MODEL_DIR=classify/model_ep50  CUTOFF=0.5  EVERY=1 (every n-th frame)  ATOMS_PER_BATCH=4096
+# Options (-v): EPOCH=50 RUN=<scripts/training/...>  MODEL_DIR=<existing model dir>  CUTOFF=0.5  EVERY=1 (every n-th frame)  ATOMS_PER_BATCH=4096
 set -eu
 . "$PBS_O_WORKDIR/pbs/common.sh"
 
-MODEL_DIR="${MODEL_DIR:-$PBS_O_WORKDIR/classify/model_ep50}"
+MODEL_DIR="${MODEL_DIR:-$PBS_O_WORKDIR/classify/model_ep${EPOCH:-50}}"
 CUTOFF="${CUTOFF:-0.5}"
 EVERY="${EVERY:-1}"
 ATOMS_PER_BATCH="${ATOMS_PER_BATCH:-4096}"
@@ -21,7 +21,18 @@ NTASKS="${NTASKS:-1}"
 TASK_ID="${PBS_ARRAY_INDEX:-0}"
 RES="$PBS_O_WORKDIR/classify/results"
 mkdir -p "$RES/logs" "$RES/done"
-[ -f "$MODEL_DIR/settings.json" ] || { echo "ERROR: no model in $MODEL_DIR (run: bash classify/make_model.sh <run> 50)" >&2; exit 1; }
+# Model: made here from a training run when it does not exist yet.  RUN = training directory (default: the newest
+# scripts/training/*), EPOCH = checkpoint to use (default 50; saved every 10 epochs).  The checkpoint is copied, so the
+# model does not change while the training goes on.
+if [ ! -f "$MODEL_DIR/settings.json" ]; then
+    EPOCH="${EPOCH:-50}"
+    RUN_DIR="${RUN:-$(ls -d "$PBS_O_WORKDIR"/scripts/training/*/ 2>/dev/null | tail -1)}"
+    [ -f "${RUN_DIR%/}/torch_checkpoint_$EPOCH.tar" ] || { echo "ERROR: no ${RUN_DIR%/}/torch_checkpoint_$EPOCH.tar" >&2; ls "${RUN_DIR%/}" >&2; exit 1; }
+    mkdir -p "$MODEL_DIR"
+    cp "${RUN_DIR%/}/settings.json" "$MODEL_DIR/settings.json"
+    cp "${RUN_DIR%/}/torch_checkpoint_$EPOCH.tar" "$MODEL_DIR/torch_checkpoint_best.tar"
+    echo "model made from ${RUN_DIR%/} epoch $EPOCH -> $MODEL_DIR"
+fi
 export OMP_NUM_THREADS=4 MKL_NUM_THREADS=4
 
 mapfile -t FILES < <(cd "$PBS_O_WORKDIR" && find classify -name '*.lammpstrj' -not -path 'classify/results/*' | sort)

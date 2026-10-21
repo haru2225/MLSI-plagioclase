@@ -44,10 +44,9 @@ The result is in `scripts/training/<date>_64pts/` (`torch_checkpoint_best.tar`, 
 
 ## Classify trajectories
 
-Put the `.lammpstrj` files in `classify/` (sub-folders are fine), then, with a finished or running training run:
+Put the `.lammpstrj` files in `classify/` (sub-folders are fine). `classify_all.pbs` makes the model itself from the newest `scripts/training/*` (checkpoint of epoch 50; `-v EPOCH=100`, `-v RUN=<dir>` to change):
 
 ```bash
-bash classify/make_model.sh scripts/training/<run> 50              # snapshot of the epoch-50 checkpoint -> classify/model_ep50
 qsub -P run classify/classify_all.pbs                               # one GPU, all files
 qsub -P run -J 0-3 -v NTASKS=4 classify/classify_all.pbs            # 4 GPUs in parallel
 tail -f classify/results/logs/<file>.log ; cat classify/results/progress_*.txt     # live progress
