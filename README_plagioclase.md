@@ -42,5 +42,17 @@ multi-GPU training (all GPUs of the job). Resources can be changed on the comman
 The three-job version (`pbs/submit_all.sh`) does the same in separate jobs.
 The result is in `scripts/training/<date>_64pts/` (`torch_checkpoint_best.tar`, `settings.json`).
 
+## Classify trajectories
+
+Put the `.lammpstrj` files in `classify/` (sub-folders are fine), then, with a finished or running training run:
+
+```bash
+bash classify/make_model.sh scripts/training/<run> 50              # snapshot of the epoch-50 checkpoint -> classify/model_ep50
+qsub -P run classify/classify_all.pbs                               # one GPU, all files
+qsub -P run -J 0-3 -v NTASKS=4 classify/classify_all.pbs            # 4 GPUs in parallel
+tail -f classify/results/logs/<file>.log ; cat classify/results/progress_*.txt     # live progress
+```
+Results: `classify/results/<file>_classification.csv` (class counts and fractions per frame; scores < 0.5 are `Other`).
+
 Notes on the data: the `melt` and `amorphous` classes were used as generated; the SiO2 melt/glass files
 (`SiO2_*`) were computed with BKS, all crystals with SHIK. The `amorphous` set is partial (30 of the 80 planned files). Two 1 GPa tridymite files were dropped because the structure collapsed.

@@ -1,0 +1,46 @@
+#!/bin/bash
+#PBS -q sg8
+#PBS -N mlsi_classify
+#PBS -l walltime=12:00:00
+#PBS -l select=1:ncpus=4:mpiprocs=1:ompthreads=4:mem=32gb:ngpus=1
+#PBS -j oe
+
+# Classify every classify/**/*.lammpstrj with a trained model (one GPU per task).
+#   qsub -P run classify/classify_all.pbs                                   # one task, all files
+#   qsub -P run -J 0-3 -v NTASKS=4 classify/classify_all.pbs                # 4 GPUs: task i takes files i, i+4, ...
+# Progress (live):   tail -f classify/results/logs/<file>.log        and     cat classify/results/progress_*.txt
+# Options (-v): MODEL_DIR=classify/model_ep50  CUTOFF=0.5  EVERY=1 (every n-th frame)  ATOMS_PER_BATCH=4096
+set -eu
+. "$PBS_O_WORKDIR/pbs/common.sh"
+
+MODEL_DIR="${MODEL_DIR:-$PBS_O_WORKDIR/classify/model_ep50}"
+CUTOFF="${CUTOFF:-0.5}"
+EVERY="${EVERY:-1}"
+ATOMS_PER_BATCH="${ATOMS_PER_BATCH:-4096}"
+NTASKS="${NTASKS:-1}"
+TASK_ID="${PBS_ARRAY_INDEX:-0}"
+RES="$PBS_O_WORKDIR/classify/results"
+mkdir -p "$RES/logs" "$RES/done"
+[ -f "$MODEL_DIR/settings.json" ] || { echo "ERROR: no model in $MODEL_DIR (run: bash classify/make_model.sh <run> 50)" >&2; exit 1; }
+export OMP_NUM_THREADS=4 MKL_NUM_THREADS=4
+
+mapfile -t FILES < <(cd "$PBS_O_WORKDIR" && find classify -name '*.lammpstrj' -not -path 'classify/results/*' | sort)
+TOTAL=${#FILES[@]}
+echo "task $TASK_ID/$NTASKS: $TOTAL files, model $MODEL_DIR, cutoff $CUTOFF"
+nvidia-smi -L
+PROG="$RES/progress_$TASK_ID.txt"
+n=0; mine=0
+for ((i = TASK_ID; i < TOTAL; i += NTASKS)); do mine=$((mine + 1)); done
+for ((i = TASK_ID; i < TOTAL; i += NTASKS)); do
+    f="${FILES[$i]}"; stem="$(echo "${f#classify/}" | sed 's|/|__|g; s|\.lammpstrj$||')"
+    n=$((n + 1))
+    if [ -f "$RES/done/$stem" ]; then echo "[$n/$mine] skip $f (done)" | tee -a "$PROG"; continue; fi
+    echo "[$n/$mine] $(date +%H:%M:%S) start $f" | tee -a "$PROG"
+    run python -u "$PBS_O_WORKDIR/classify/classify_lammpstrj.py" "$PBS_O_WORKDIR/$f" \
+        --model-dir "$MODEL_DIR" --output "$RES/${stem}_classification.csv" \
+        --cutoff "$CUTOFF" --every-nth "$EVERY" --atoms-per-batch "$ATOMS_PER_BATCH" --require-gpu \
+        > "$RES/logs/$stem.log" 2>&1
+    touch "$RES/done/$stem"
+    echo "[$n/$mine] $(date +%H:%M:%S) finished $f" | tee -a "$PROG"
+done
+echo "all done" | tee -a "$PROG"

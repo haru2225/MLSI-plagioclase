@@ -281,3 +281,6 @@ scripts/training/
 *.h5
 gpu_usage_*.csv
 *.o[0-9]*
+classify/results/
+classify/model_ep*/
+classify/**/*.lammpstrj
