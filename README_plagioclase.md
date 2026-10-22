@@ -47,9 +47,8 @@ The result is in `scripts/training/<date>_64pts/` (`torch_checkpoint_best.tar`, 
 Put the `.lammpstrj` files in `classify/` (sub-folders are fine). `classify_all.pbs` makes the model itself from the newest `scripts/training/*` (checkpoint of epoch 50; `-v EPOCH=100`, `-v RUN=<dir>` to change):
 
 ```bash
-qsub -P run classify/classify_all.pbs                               # one GPU, all files
-qsub -P run -J 0-3 -v NTASKS=4 classify/classify_all.pbs            # 4 GPUs in parallel
-tail -f classify/results/logs/<file>.log ; cat classify/results/progress_*.txt     # live progress
+qsub -P run classify/classify_all.pbs                               # all GPUs of the job work in parallel on different files; finished files are skipped
+cat classify/results/progress.txt ; tail -f classify/results/logs/<file>.log     # live progress
 ```
 Results: `classify/results/<file>_classification.csv` (class counts and fractions per frame; scores < 0.5 are `Other`).
 

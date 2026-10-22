@@ -2,13 +2,15 @@
 #PBS -q sg8
 #PBS -N mlsi_classify
 #PBS -l walltime=12:00:00
-#PBS -l select=1:ncpus=4:mpiprocs=1:ompthreads=4:mem=32gb:ngpus=1
+#PBS -l select=1:ncpus=16:mpiprocs=1:ompthreads=4:mem=128gb:ngpus=4
 #PBS -j oe
 
-# Classify every classify/**/*.lammpstrj with a trained model (one GPU per task).
-#   qsub -P run classify/classify_all.pbs                                   # one task, all files
-#   qsub -P run -J 0-3 -v NTASKS=4 classify/classify_all.pbs                # 4 GPUs: task i takes files i, i+4, ...
-# Progress (live):   tail -f classify/results/logs/<file>.log        and     cat classify/results/progress_*.txt
+# Classify every classify/**/*.lammpstrj with a trained model.  One worker per GPU of the job: the workers take the
+# files one by one (a free GPU takes the next unfinished file), files that are already finished are skipped.
+#   qsub -P run classify/classify_all.pbs                        # all GPUs of the job (select ... ngpus=4 above)
+#   qsub -P run -l select=1:ncpus=8:mpiprocs=1:ompthreads=2:mem=64gb:ngpus=2 classify/classify_all.pbs   # 2 GPUs
+# Run one such job at a time (the "claim" markers are reset when a job starts).
+# Progress (live):   cat classify/results/progress.txt     and     tail -f classify/results/logs/<file>.log
 # Options (-v): EPOCH=50 RUN=<scripts/training/...>  MODEL_DIR=<existing model dir>  CUTOFF=0.5  EVERY=1 (every n-th frame)  ATOMS_PER_BATCH=4096
 set -eu
 . "$PBS_O_WORKDIR/pbs/common.sh"
@@ -17,8 +19,6 @@ MODEL_DIR="${MODEL_DIR:-$PBS_O_WORKDIR/classify/model_ep${EPOCH:-50}}"
 CUTOFF="${CUTOFF:-0.5}"
 EVERY="${EVERY:-1}"
 ATOMS_PER_BATCH="${ATOMS_PER_BATCH:-4096}"
-NTASKS="${NTASKS:-1}"
-TASK_ID="${PBS_ARRAY_INDEX:-0}"
 RES="$PBS_O_WORKDIR/classify/results"
 mkdir -p "$RES/logs" "$RES/done"
 # Model: made here from a training run when it does not exist yet.  RUN = training directory (default: the newest
@@ -33,25 +33,43 @@ if [ ! -f "$MODEL_DIR/settings.json" ]; then
     cp "${RUN_DIR%/}/torch_checkpoint_$EPOCH.tar" "$MODEL_DIR/torch_checkpoint_best.tar"
     echo "model made from ${RUN_DIR%/} epoch $EPOCH -> $MODEL_DIR"
 fi
-export OMP_NUM_THREADS=4 MKL_NUM_THREADS=4
 
-mapfile -t FILES < <(cd "$PBS_O_WORKDIR" && find classify -name '*.lammpstrj' -not -path 'classify/results/*' | sort)
+
+export OMP_NUM_THREADS="${OMP_NUM_THREADS:-4}" MKL_NUM_THREADS="${OMP_NUM_THREADS:-4}"
+
+FILES=()
+while IFS= read -r line; do FILES+=("$line"); done < <(cd "$PBS_O_WORKDIR" && find classify -name '*.lammpstrj' -not -path 'classify/results/*' | sort)
 TOTAL=${#FILES[@]}
-echo "task $TASK_ID/$NTASKS: $TOTAL files, model $MODEL_DIR, cutoff $CUTOFF"
+# GPUs of this job (indices as seen by the container; honours a CUDA_VISIBLE_DEVICES list set by PBS)
+if [ -n "${CUDA_VISIBLE_DEVICES:-}" ]; then IFS=',' read -r -a GPUS <<< "$CUDA_VISIBLE_DEVICES"
+else NG=$(nvidia-smi -L | wc -l); GPUS=(); for ((g = 0; g < NG; g++)); do GPUS+=("$g"); done; fi
+echo "$TOTAL files, ${#GPUS[@]} GPUs (${GPUS[*]}), model $MODEL_DIR, cutoff $CUTOFF"
 nvidia-smi -L
-PROG="$RES/progress_$TASK_ID.txt"
-n=0; mine=0
-for ((i = TASK_ID; i < TOTAL; i += NTASKS)); do mine=$((mine + 1)); done
-for ((i = TASK_ID; i < TOTAL; i += NTASKS)); do
-    f="${FILES[$i]}"; stem="$(echo "${f#classify/}" | sed 's|/|__|g; s|\.lammpstrj$||')"
-    n=$((n + 1))
-    if [ -f "$RES/done/$stem" ]; then echo "[$n/$mine] skip $f (done)" | tee -a "$PROG"; continue; fi
-    echo "[$n/$mine] $(date +%H:%M:%S) start $f" | tee -a "$PROG"
-    run python -u "$PBS_O_WORKDIR/classify/classify_lammpstrj.py" "$PBS_O_WORKDIR/$f" \
-        --model-dir "$MODEL_DIR" --output "$RES/${stem}_classification.csv" \
-        --cutoff "$CUTOFF" --every-nth "$EVERY" --atoms-per-batch "$ATOMS_PER_BATCH" --require-gpu \
-        > "$RES/logs/$stem.log" 2>&1
-    touch "$RES/done/$stem"
-    echo "[$n/$mine] $(date +%H:%M:%S) finished $f" | tee -a "$PROG"
-done
-echo "all done" | tee -a "$PROG"
+PROG="$RES/progress.txt"
+rm -rf "$RES/claim"; mkdir -p "$RES/claim"
+NDONE=$(ls "$RES/done" | wc -l)
+echo "$(date +%F\ %T) start: $TOTAL files, $NDONE already done, ${#GPUS[@]} GPUs" | tee -a "$PROG"
+
+worker() {   # $1 = GPU id, $2 = worker number
+    local gpu="$1" w="$2" f stem
+    for f in "${FILES[@]}"; do
+        stem="$(echo "${f#classify/}" | sed 's|/|__|g; s|\.lammpstrj$||')"
+        [ -f "$RES/done/$stem" ] && continue
+        mkdir "$RES/claim/$stem" 2>/dev/null || continue          # another worker has it
+        echo "$(date +%T) [gpu $gpu] start  $f" >> "$PROG"
+        if CUDA_VISIBLE_DEVICES="$gpu" run python -u "$PBS_O_WORKDIR/classify/classify_lammpstrj.py" "$PBS_O_WORKDIR/$f" \
+            --model-dir "$MODEL_DIR" --output "$RES/${stem}_classification.csv" \
+            --cutoff "$CUTOFF" --every-nth "$EVERY" --atoms-per-batch "$ATOMS_PER_BATCH" --require-gpu \
+            > "$RES/logs/$stem.log" 2>&1; then
+            touch "$RES/done/$stem"
+            echo "$(date +%T) [gpu $gpu] finished $f ($(ls "$RES/done" | wc -l)/$TOTAL done)" >> "$PROG"
+        else
+            echo "$(date +%T) [gpu $gpu] FAILED  $f (see logs/$stem.log)" >> "$PROG"
+        fi
+    done
+}
+pids=(); w=0
+for g in "${GPUS[@]}"; do worker "$g" "$w" & pids+=($!); w=$((w + 1)); done
+for p in "${pids[@]}"; do wait "$p" || true; done
+echo "$(date +%F\ %T) all workers finished: $(ls "$RES/done" | wc -l)/$TOTAL done" | tee -a "$PROG"
+[ "$(ls "$RES/done" | wc -l)" -ge "$TOTAL" ] || { echo "some files failed, see $PROG" >&2; exit 1; }
