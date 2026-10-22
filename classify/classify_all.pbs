@@ -11,7 +11,7 @@
 #   qsub -P run -l select=1:ncpus=8:mpiprocs=1:ompthreads=2:mem=64gb:ngpus=2 classify/classify_all.pbs   # 2 GPUs
 # Run one such job at a time (the "claim" markers are reset when a job starts).
 # Progress (live):   cat classify/results/progress.txt     and     tail -f classify/results/logs/<file>.log
-# Options (-v): EPOCH=50 RUN=<scripts/training/...>  MODEL_DIR=<existing model dir>  CUTOFF=0.5  EVERY=1 (every n-th frame)  ATOMS_PER_BATCH=4096
+# Options (-v): EPOCH=50 RUN=<scripts/training/...>  MODEL_DIR=<existing model dir>  CUTOFF=0.5  EVERY=1 (every n-th frame)  ATOMS_PER_BATCH=4096  XYZ_EVERY=10
 set -eu
 . "$PBS_O_WORKDIR/pbs/common.sh"
 
@@ -19,8 +19,9 @@ MODEL_DIR="${MODEL_DIR:-$PBS_O_WORKDIR/classify/model_ep${EPOCH:-50}}"
 CUTOFF="${CUTOFF:-0.5}"
 EVERY="${EVERY:-1}"
 ATOMS_PER_BATCH="${ATOMS_PER_BATCH:-4096}"
+XYZ_EVERY="${XYZ_EVERY:-10}"       # coloured xyz: every n-th classified frame (0 = no xyz)
 RES="$PBS_O_WORKDIR/classify/results"
-mkdir -p "$RES/logs" "$RES/done"
+mkdir -p "$RES/logs" "$RES/done" "$RES/xyz"
 # Model: made here from a training run when it does not exist yet.  RUN = training directory (default: the newest
 # scripts/training/*), EPOCH = checkpoint to use (default 50; saved every 10 epochs).  The checkpoint is copied, so the
 # model does not change while the training goes on.
@@ -60,6 +61,7 @@ worker() {   # $1 = GPU id, $2 = worker number
         if CUDA_VISIBLE_DEVICES="$gpu" run python -u "$PBS_O_WORKDIR/classify/classify_lammpstrj.py" "$PBS_O_WORKDIR/$f" \
             --model-dir "$MODEL_DIR" --output "$RES/${stem}_classification.csv" \
             --cutoff "$CUTOFF" --every-nth "$EVERY" --atoms-per-batch "$ATOMS_PER_BATCH" --require-gpu \
+            ${XYZ_EVERY:+$( [ "$XYZ_EVERY" -gt 0 ] && echo "--save-xyz $RES/xyz/${stem}_classified.xyz --xyz-every $XYZ_EVERY" )} \
             > "$RES/logs/$stem.log" 2>&1; then
             touch "$RES/done/$stem"
             echo "$(date +%T) [gpu $gpu] finished $f ($(ls "$RES/done" | wc -l)/$TOTAL done)" >> "$PROG"

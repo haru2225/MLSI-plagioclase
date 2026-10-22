@@ -50,6 +50,9 @@ Put the `.lammpstrj` files in `classify/` (sub-folders are fine). `classify_all.
 qsub -P run classify/classify_all.pbs                               # all GPUs of the job work in parallel on different files; finished files are skipped
 cat classify/results/progress.txt ; tail -f classify/results/logs/<file>.log     # live progress
 ```
+Coloured structures: `classify/results/xyz/<file>_classified.xyz` (every 10th frame; `-v XYZ_EVERY=1` for all frames,
+`0` for none) with the legend in `<file>_classified_legend.txt`. Copy it to your PC and open it in OVITO: atoms are
+coloured by class (`Structure`), the score is the property `Score`.
 Results: `classify/results/<file>_classification.csv` (class counts and fractions per frame; scores < 0.5 are `Other`).
 
 Notes on the data: the `melt` and `amorphous` classes were used as generated; the SiO2 melt/glass files

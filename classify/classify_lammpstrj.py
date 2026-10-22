@@ -23,11 +23,24 @@ from pathlib import Path
 
 import numpy as np
 import torch
-from ovito.io import import_file
+from ovito.io import import_file, export_file
 
 # MLSI is imported from this repository (../src) unless MLSI_SRC points to another "src" directory.
 sys.path.insert(0, os.environ.get("MLSI_SRC") or str(Path(__file__).resolve().parent.parent / "src"))
 from MLSI import MLSI  # noqa: E402
+
+
+# One colour per class id (id -> RGB); Other (score < cutoff) is grey.  The legend is written next to the xyz files.
+PALETTE = [(0.89, 0.10, 0.11), (0.22, 0.49, 0.72), (0.30, 0.69, 0.29), (1.00, 0.50, 0.00), (0.60, 0.31, 0.64),
+           (0.65, 0.34, 0.16), (0.97, 0.51, 0.75), (0.00, 0.80, 0.80), (0.74, 0.74, 0.13), (0.12, 0.47, 0.71),
+           (0.55, 0.83, 0.78), (1.00, 0.73, 0.47), (0.42, 0.24, 0.60), (0.20, 0.63, 0.17), (0.99, 0.60, 0.60),
+           (0.35, 0.35, 0.80), (0.80, 0.40, 0.40), (0.50, 0.75, 0.20), (0.00, 0.40, 0.20), (0.85, 0.65, 0.13)]
+OTHER_COLOR = (0.55, 0.55, 0.55)
+
+
+def class_colors(structures: np.ndarray) -> np.ndarray:
+    pal = np.array(PALETTE + [OTHER_COLOR])
+    return pal[np.where(structures < 0, len(PALETTE), structures % len(PALETTE))]
 
 
 def check_gpu() -> str:
@@ -66,6 +79,11 @@ def main() -> None:
     parser.add_argument("--save-labels", type=Path, default=None, metavar="DIR",
                         help="Also write per-atom id/structure/score of each frame "
                              "to DIR/<stem>_frame<N>.npz")
+    parser.add_argument("--save-xyz", type=Path, default=None, metavar="FILE",
+                        help="Also write an extended-xyz trajectory with per-atom Structure, Score and Color "
+                             "(open it in OVITO: atoms are coloured by class)")
+    parser.add_argument("--xyz-every", type=int, default=10,
+                        help="With --save-xyz: write every n-th of the classified frames (default 10)")
     parser.add_argument("--require-gpu", action="store_true",
                         help="Exit with an error unless a working CUDA GPU is present")
     args = parser.parse_args()
@@ -160,9 +178,24 @@ def main() -> None:
                     score=scores.astype(np.float32),
                     timestep=row["timestep"],
                 )
+            if args.save_xyz and (frame - args.start_frame) // args.every_nth % args.xyz_every == 0:
+                data.particles_.create_property("Color", data=class_colors(structures).astype(np.float32))
+                tmp = args.save_xyz.with_suffix(".frame.tmp")
+                export_file(data, str(tmp), "xyz", columns=[
+                    "Particle Identifier", "Particle Type", "Position.X", "Position.Y", "Position.Z",
+                    "Structure", "Score", "Color.R", "Color.G", "Color.B"])
+                with args.save_xyz.open("ab" if frame != args.start_frame else "wb") as out:
+                    out.write(tmp.read_bytes())
+                tmp.unlink()
             print(f"frame {frame + 1}/{total_frames}: {structures.size:,} atoms "
                   f"in {time.perf_counter() - started:.1f} s", flush=True)
 
+    if args.save_xyz:
+        names = {**classes, -1: "Other"}
+        legend = args.save_xyz.with_name(args.save_xyz.stem + "_legend.txt")
+        legend.write_text("".join(
+            f"{cid}\t{name}\t(R,G,B)={tuple(float(c) for c in class_colors(np.array([cid]))[0])}\n"
+            for cid, name in sorted(names.items())))
     print(f"summary: {output}")
 
 
